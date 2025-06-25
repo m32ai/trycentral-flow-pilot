@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -51,7 +52,7 @@ const ChatInterface = () => {
     // Pattern matching for common automation requests
     if (lowerMessage.includes('slack') && (lowerMessage.includes('every') || lowerMessage.includes('daily') || lowerMessage.includes('morning'))) {
       return {
-        trigger: 'Schedule',
+        trigger: 'Time-based',
         action: 'Send Slack message',
         frequency: 'Daily at 9:00 AM',
         tools: ['Slack'],
@@ -61,7 +62,7 @@ const ChatInterface = () => {
     
     if (lowerMessage.includes('email') && lowerMessage.includes('whatsapp')) {
       return {
-        trigger: 'New important email received',
+        trigger: 'Email received',
         action: 'Send WhatsApp notification',
         frequency: 'Every time',
         tools: ['Gmail', 'WhatsApp'],
@@ -71,9 +72,9 @@ const ChatInterface = () => {
     
     if (lowerMessage.includes('remind') || lowerMessage.includes('reminder')) {
       return {
-        trigger: 'Schedule',
+        trigger: 'Time-based',
         action: 'Send reminder',
-        frequency: 'As specified',
+        frequency: 'Custom',
         tools: ['Calendar', 'Notifications'],
         missingInfo: ['When should I remind you?', 'What reminder message?']
       };
@@ -81,7 +82,7 @@ const ChatInterface = () => {
 
     if (lowerMessage.includes('when') || lowerMessage.includes('if')) {
       return {
-        trigger: 'Custom condition',
+        trigger: 'Event-based',
         action: 'Execute action',
         frequency: 'When condition is met',
         tools: ['To be determined'],
@@ -141,53 +142,133 @@ const ChatInterface = () => {
   };
 
   const WorkflowCard = ({ suggestion }: { suggestion: WorkflowSuggestion }) => {
+    const [selectedTrigger, setSelectedTrigger] = useState(suggestion.trigger);
+    const [selectedAction, setSelectedAction] = useState(suggestion.action);
     const [selectedFrequency, setSelectedFrequency] = useState(suggestion.frequency);
+    const [customMessage, setCustomMessage] = useState('');
+    const [customChannel, setCustomChannel] = useState('');
+
+    const triggerOptions = [
+      'Time-based',
+      'Email received',
+      'Calendar event',
+      'Form submission',
+      'File uploaded',
+      'Event-based',
+      'Manual trigger'
+    ];
+
+    const actionOptions = [
+      'Send Slack message',
+      'Send WhatsApp message',
+      'Send email',
+      'Create calendar event',
+      'Send notification',
+      'Update spreadsheet',
+      'Execute webhook'
+    ];
+
+    const frequencyOptions = [
+      'Once',
+      'Daily',
+      'Weekly',
+      'Monthly',
+      'Every time',
+      'Weekdays only',
+      'Custom schedule'
+    ];
+
+    const needsSlackDetails = selectedAction === 'Send Slack message';
 
     return (
-      <Card className="mt-4 p-4 bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 border-brand-primary/20">
-        <div className="space-y-4">
+      <Card className="mt-4 p-6 bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 border-brand-primary/20">
+        <div className="space-y-6">
           <div className="flex items-center gap-2 text-brand-primary font-semibold">
             <Zap className="w-5 h-5" />
-            Workflow Preview
+            Workflow Configuration
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="space-y-2">
-              <div className="font-medium text-gray-700">When</div>
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border">
-                <Clock className="w-4 h-4 text-brand-primary" />
-                <span>{suggestion.trigger}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-3">
+              <div className="font-medium text-gray-700 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                When
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="font-medium text-gray-700">Do</div>
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border">
-                <Zap className="w-4 h-4 text-brand-secondary" />
-                <span>{suggestion.action}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="font-medium text-gray-700">How Often</div>
-              <Select value={selectedFrequency} onValueChange={setSelectedFrequency}>
-                <SelectTrigger className="bg-white">
-                  <div className="flex items-center gap-2">
-                    <Repeat className="w-4 h-4 text-brand-accent" />
-                    <SelectValue />
-                  </div>
+              <Select value={selectedTrigger} onValueChange={setSelectedTrigger}>
+                <SelectTrigger className="bg-white border-brand-primary/20">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border shadow-lg z-50">
-                  <SelectItem value="Once">Once</SelectItem>
-                  <SelectItem value="Daily">Every day</SelectItem>
-                  <SelectItem value="Weekly">Every week</SelectItem>
-                  <SelectItem value="Monthly">Every month</SelectItem>
-                  <SelectItem value="Every time">Every time</SelectItem>
-                  <SelectItem value="Custom">Custom schedule</SelectItem>
+                  {triggerOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="font-medium text-gray-700 flex items-center gap-2">
+                <Zap className="w-4 h-4" />
+                Do
+              </div>
+              <Select value={selectedAction} onValueChange={setSelectedAction}>
+                <SelectTrigger className="bg-white border-brand-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {actionOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="font-medium text-gray-700 flex items-center gap-2">
+                <Repeat className="w-4 h-4" />
+                How Often
+              </div>
+              <Select value={selectedFrequency} onValueChange={setSelectedFrequency}>
+                <SelectTrigger className="bg-white border-brand-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {frequencyOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {needsSlackDetails && (
+            <div className="space-y-4 p-4 bg-white rounded-lg border border-brand-primary/10">
+              <div className="font-medium text-gray-700 flex items-center gap-2">
+                <Slack className="w-4 h-4 text-brand-primary" />
+                Slack Configuration
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Channel</label>
+                  <Input
+                    placeholder="e.g., #general, @username"
+                    value={customChannel}
+                    onChange={(e) => setCustomChannel(e.target.value)}
+                    className="bg-white border-gray-300"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Message</label>
+                  <Textarea
+                    placeholder="What message should I send?"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    className="bg-white border-gray-300 min-h-[80px]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <Separator />
           
@@ -205,11 +286,11 @@ const ChatInterface = () => {
 
           {suggestion.missingInfo && suggestion.missingInfo.length > 0 && (
             <div className="space-y-3">
-              <div className="font-medium text-orange-600">I need a bit more info:</div>
+              <div className="font-medium text-orange-600">Configuration Notes:</div>
               <div className="space-y-2">
                 {suggestion.missingInfo.map((info, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded-lg">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                  <div key={index} className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-3 rounded-lg">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0" />
                     {info}
                   </div>
                 ))}
@@ -217,12 +298,13 @@ const ChatInterface = () => {
             </div>
           )}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-3 pt-4">
             <Button className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-white">
-              Set Up This Workflow
+              Connect & Set Up Workflow
             </Button>
             <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10">
-              Modify
+              <Edit className="w-4 h-4 mr-2" />
+              Test Run
             </Button>
           </div>
         </div>
