@@ -155,6 +155,17 @@ const ChatInterface = () => {
     }
   };
 
+  const getToolColor = (tool: string) => {
+    switch (tool.toLowerCase()) {
+      case 'slack': return 'bg-purple-500';
+      case 'whatsapp': return 'bg-green-500';
+      case 'gmail': return 'bg-red-500';
+      case 'calendar': return 'bg-blue-500';
+      case 'google sheets': return 'bg-emerald-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
   const connectTool = async (toolName: string) => {
     return new Promise<void>((resolve) => {
       setTimeout(() => {
@@ -282,10 +293,7 @@ const ChatInterface = () => {
 
     const handleConnectWorkflow = () => {
       if (!allToolsConnected) {
-        // Suggest connecting missing tools
-        disconnectedToolsList.forEach(tool => {
-          suggestToolConnection(tool);
-        });
+        // Show connection cards instead of suggesting tools
         return;
       }
       
@@ -299,25 +307,27 @@ const ChatInterface = () => {
       });
     };
 
-    const handleConnectTool = async (toolName?: string) => {
-      const toolToConnect = toolName || disconnectedToolsList[0];
+    const handleConnectTool = async (toolName: string) => {
       setIsConnecting(true);
-      setConnectingTool(toolToConnect);
-      setStepStatuses(prev => ({ ...prev, connect: 'loading' }));
+      setConnectingTool(toolName);
       
       try {
-        await connectTool(toolToConnect);
-        setStepStatuses(prev => ({ ...prev, connect: 'completed' }));
+        await connectTool(toolName);
         setIsConnecting(false);
-        setCurrentStep(2);
+        setConnectingTool('');
         
-        // Auto-proceed to permissions step
-        setTimeout(() => {
-          handleConfigurePermissions();
-        }, 1000);
+        // Show success message for the specific tool
+        const successMessage: Message = {
+          id: Date.now().toString(),
+          type: 'bot',
+          content: `🎉 Great! ${toolName} is now connected. ${disconnectedToolsList.filter(t => t !== toolName).length === 0 ? "All tools are connected! You can now set up your workflow." : `You still need to connect ${disconnectedToolsList.filter(t => t !== toolName).join(', ')}.`}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, successMessage]);
       } catch (error) {
         console.error('Error connecting tool:', error);
         setIsConnecting(false);
+        setConnectingTool('');
       }
     };
 
@@ -374,7 +384,7 @@ const ChatInterface = () => {
       const dashboardMessage: Message = {
         id: Date.now().toString(),
         type: 'bot',
-        content: "Opening your workflow dashboard! Here you can see all your active automations, their performance, and recent activity.",
+        content: "🚀 Opening your workflow dashboard! Here you can monitor all your active automations, view performance metrics, and see recent activity. You currently have 3 active workflows with a 98% success rate this week!",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, dashboardMessage]);
@@ -393,11 +403,77 @@ const ChatInterface = () => {
       const editMessage: Message = {
         id: Date.now().toString(),
         type: 'bot',
-        content: "Great! You can now edit your workflow settings below. Make any changes you need and then save the updated workflow.",
+        content: "✏️ Perfect! You can now edit your workflow settings below. Make any changes you need and then save the updated workflow.",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, editMessage]);
     };
+
+    const ToolConnectionCards = () => (
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center gap-2 text-gray-800 font-medium mb-4">
+          <div className="w-2 h-2 bg-blue-400 rounded-full" />
+          Connect your tools to get started
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {disconnectedToolsList.map((tool) => (
+            <Card key={tool} className="p-4 border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${getToolColor(tool)} flex items-center justify-center text-white`}>
+                    {getToolIcon(tool)}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800">{tool}</div>
+                    <div className="text-sm text-gray-600">Not connected</div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  onClick={() => handleConnectTool(tool)}
+                  disabled={isConnecting && connectingTool === tool}
+                >
+                  {isConnecting && connectingTool === tool ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Connect
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-xs text-blue-700">
+                  <strong>Secure connection:</strong> You'll be redirected to {tool}'s official login page. We only access what's needed for your workflow.
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Connected tools preview */}
+        {connectedToolsList.length > 0 && (
+          <div className="mt-6">
+            <div className="text-sm font-medium text-green-700 mb-3">✅ Already connected:</div>
+            <div className="flex flex-wrap gap-2">
+              {connectedToolsList.map((tool) => (
+                <div key={tool} className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <div className={`w-6 h-6 rounded ${getToolColor(tool)} flex items-center justify-center text-white`}>
+                    {getToolIcon(tool)}
+                  </div>
+                  <span className="text-sm text-green-800">{tool}</span>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
 
     const SetupStepsFlow = () => (
       <div className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-200">
@@ -549,34 +625,8 @@ const ChatInterface = () => {
         </div>
         
         <div className="p-6 space-y-6">
-          {/* Connection Status Alert */}
-          {!allToolsConnected && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="flex items-center gap-2 text-amber-800 font-medium mb-2">
-                <div className="w-2 h-2 bg-amber-400 rounded-full" />
-                Tools Connection Required
-              </div>
-              <div className="text-sm text-amber-700 mb-3">
-                Some tools need to be connected before you can set up this workflow:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {disconnectedToolsList.map((tool, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-white/60 px-3 py-1 rounded-full text-sm">
-                    {getToolIcon(tool)}
-                    <span className="text-amber-800">{tool}</span>
-                    <Button
-                      size="sm" 
-                      variant="ghost"
-                      className="h-auto p-1 text-amber-600 hover:text-amber-800"
-                      onClick={() => handleConnectTool(tool)}
-                    >
-                      Connect
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Tool Connection Cards */}
+          {!allToolsConnected && <ToolConnectionCards />}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-3">
@@ -701,7 +751,7 @@ const ChatInterface = () => {
             <Button 
               className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl"
               onClick={handleConnectWorkflow}
-              disabled={showSetupSteps}
+              disabled={showSetupSteps || !allToolsConnected}
             >
               {showSetupSteps ? (
                 <>
@@ -715,7 +765,7 @@ const ChatInterface = () => {
                 </>
               ) : (
                 <>
-                  Connect & Set Up Workflow
+                  Set Up Workflow
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
