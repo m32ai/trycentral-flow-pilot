@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star, CheckCircle, ArrowRight } from 'lucide-react';
+import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star, CheckCircle, ArrowRight, Loader2, ExternalLink, Shield, Play } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -198,6 +198,14 @@ const ChatInterface = () => {
     const [customMessage, setCustomMessage] = useState(suggestion.prefilled ? 'Good morning team! Please share your daily standup updates.' : '');
     const [customChannel, setCustomChannel] = useState(suggestion.prefilled ? '#general' : '');
     const [showSetupSteps, setShowSetupSteps] = useState(false);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [stepStatuses, setStepStatuses] = useState({
+      connect: 'pending',
+      permissions: 'pending',
+      test: 'pending'
+    });
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [connectionSuccess, setConnectionSuccess] = useState(false);
 
     const triggerOptions = [
       'Time-based',
@@ -244,56 +252,201 @@ const ChatInterface = () => {
       });
     };
 
+    const handleConnectTool = async () => {
+      setIsConnecting(true);
+      setStepStatuses(prev => ({ ...prev, connect: 'loading' }));
+      
+      // Simulate connection process
+      setTimeout(() => {
+        setStepStatuses(prev => ({ ...prev, connect: 'completed' }));
+        setConnectionSuccess(true);
+        setIsConnecting(false);
+        setCurrentStep(2);
+        
+        // Auto-proceed to permissions step
+        setTimeout(() => {
+          handleConfigurePermissions();
+        }, 1000);
+      }, 2000);
+    };
+
+    const handleConfigurePermissions = async () => {
+      setStepStatuses(prev => ({ ...prev, permissions: 'loading' }));
+      
+      // Simulate permissions configuration
+      setTimeout(() => {
+        setStepStatuses(prev => ({ ...prev, permissions: 'completed' }));
+        setCurrentStep(3);
+        
+        // Auto-proceed to test step
+        setTimeout(() => {
+          handleTestWorkflow();
+        }, 1000);
+      }, 1500);
+    };
+
+    const handleTestWorkflow = async () => {
+      setStepStatuses(prev => ({ ...prev, test: 'loading' }));
+      
+      // Simulate test execution
+      setTimeout(() => {
+        setStepStatuses(prev => ({ ...prev, test: 'completed' }));
+        
+        // Show success message
+        setTimeout(() => {
+          alert('🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule.');
+        }, 500);
+      }, 2000);
+    };
+
+    const getStepIcon = (status: string, stepNumber: number) => {
+      if (status === 'completed') return <CheckCircle className="w-5 h-5 text-green-600" />;
+      if (status === 'loading') return <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />;
+      return (
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+          currentStep >= stepNumber ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600'
+        }`}>
+          {stepNumber}
+        </div>
+      );
+    };
+
+    const getStepBackground = (status: string, stepNumber: number) => {
+      if (status === 'completed') return 'bg-green-50 border-green-200';
+      if (status === 'loading') return 'bg-blue-50 border-blue-200';
+      if (currentStep >= stepNumber) return 'bg-white border-gray-200';
+      return 'bg-gray-50 border-gray-200';
+    };
+
     const SetupStepsFlow = () => (
       <div className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-200">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-6">
           <CheckCircle className="w-5 h-5 text-blue-600" />
           <h3 className="font-semibold text-blue-800">Setting up your workflow...</h3>
         </div>
         
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+          {/* Step 1: Connect Tools */}
+          <div className={`flex items-center gap-3 p-4 rounded-lg border ${getStepBackground(stepStatuses.connect, 1)}`}>
+            {getStepIcon(stepStatuses.connect, 1)}
             <div className="flex-1">
               <div className="font-medium text-gray-800">Connect your tools</div>
-              <div className="text-sm text-gray-600">We'll help you connect {suggestion.tools.join(', ')}</div>
+              <div className="text-sm text-gray-600">
+                {stepStatuses.connect === 'completed' ? 
+                  `✅ Successfully connected to ${suggestion.tools.join(', ')}` :
+                  `We'll help you connect ${suggestion.tools.join(', ')}`
+                }
+              </div>
             </div>
-            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">
-              Connect
-            </Button>
+            {stepStatuses.connect === 'pending' && (
+              <Button 
+                size="sm" 
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleConnectTool}
+                disabled={isConnecting}
+              >
+                {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect'}
+              </Button>
+            )}
+            {stepStatuses.connect === 'completed' && (
+              <Button size="sm" variant="outline" className="text-green-600 border-green-300">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Connected
+              </Button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+          {/* Step 2: Configure Permissions */}
+          <div className={`flex items-center gap-3 p-4 rounded-lg border ${getStepBackground(stepStatuses.permissions, 2)}`}>
+            {getStepIcon(stepStatuses.permissions, 2)}
             <div className="flex-1">
-              <div className="font-medium text-gray-600">Configure permissions</div>
-              <div className="text-sm text-gray-500">Grant necessary permissions for the workflow</div>
+              <div className="font-medium text-gray-800">Configure permissions</div>
+              <div className="text-sm text-gray-600">
+                {stepStatuses.permissions === 'completed' ? 
+                  '✅ Permissions configured successfully' :
+                  stepStatuses.permissions === 'loading' ?
+                  '⚙️ Configuring permissions...' :
+                  'Grant necessary permissions for the workflow'
+                }
+              </div>
             </div>
-            <Button size="sm" variant="outline" disabled>
-              Pending
-            </Button>
+            {stepStatuses.permissions === 'loading' && (
+              <Button size="sm" variant="outline" disabled>
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                Configuring
+              </Button>
+            )}
+            {stepStatuses.permissions === 'completed' && (
+              <Button size="sm" variant="outline" className="text-green-600 border-green-300">
+                <Shield className="w-4 h-4 mr-1" />
+                Configured
+              </Button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+          {/* Step 3: Test & Activate */}
+          <div className={`flex items-center gap-3 p-4 rounded-lg border ${getStepBackground(stepStatuses.test, 3)}`}>
+            {getStepIcon(stepStatuses.test, 3)}
             <div className="flex-1">
-              <div className="font-medium text-gray-600">Test & activate</div>
-              <div className="text-sm text-gray-500">Run a test and activate your workflow</div>
+              <div className="font-medium text-gray-800">Test & activate</div>
+              <div className="text-sm text-gray-600">
+                {stepStatuses.test === 'completed' ? 
+                  '🎉 Workflow is now active and running!' :
+                  stepStatuses.test === 'loading' ?
+                  '🧪 Testing workflow...' :
+                  'Run a test and activate your workflow'
+                }
+              </div>
             </div>
-            <Button size="sm" variant="outline" disabled>
-              Pending
-            </Button>
+            {stepStatuses.test === 'loading' && (
+              <Button size="sm" variant="outline" disabled>
+                <Play className="w-4 h-4 animate-spin mr-1" />
+                Testing
+              </Button>
+            )}
+            {stepStatuses.test === 'completed' && (
+              <Button size="sm" variant="outline" className="text-green-600 border-green-300">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Active
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
-            <div className="text-sm text-amber-700">
-              <strong>Note:</strong> You'll be redirected to connect your {suggestion.tools[0]} account. This is secure and we only access what's needed for your workflow.
+        {/* Connection Instructions */}
+        {currentStep === 1 && stepStatuses.connect === 'pending' && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
+              <div className="text-sm text-amber-700">
+                <strong>Note:</strong> You'll be redirected to connect your {suggestion.tools[0]} account. This is secure and we only access what's needed for your workflow.
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Success Message */}
+        {stepStatuses.test === 'completed' && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 text-green-800">
+              <CheckCircle className="w-5 h-5" />
+              <div className="font-semibold">Workflow Successfully Activated!</div>
+            </div>
+            <div className="text-sm text-green-700 mt-1">
+              Your automation will now run {selectedFrequency.toLowerCase()} and {selectedAction.toLowerCase()}.
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" className="text-green-700 border-green-300">
+                <ExternalLink className="w-4 h-4 mr-1" />
+                View Dashboard
+              </Button>
+              <Button size="sm" variant="outline" className="text-green-700 border-green-300">
+                <Edit className="w-4 h-4 mr-1" />
+                Edit Workflow
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
 
