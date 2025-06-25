@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star, CheckCircle, ArrowRight, Loader2, ExternalLink, Shield, Play } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star, CheckCircle, ArrowRight, Loader2, ExternalLink, Shield, Play, Settings, BarChart3 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -25,6 +26,10 @@ interface WorkflowSuggestion {
   prefilled?: boolean;
 }
 
+interface ConnectedTools {
+  [key: string]: boolean;
+}
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -37,6 +42,16 @@ const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Tool connection states
+  const [connectedTools, setConnectedTools] = useState<ConnectedTools>({
+    'Slack': true, // Slack is already connected
+    'Gmail': false,
+    'WhatsApp': false,
+    'Google Sheets': false,
+    'Calendar': false,
+    'Notifications': false
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,6 +155,25 @@ const ChatInterface = () => {
     }
   };
 
+  const connectTool = async (toolName: string) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        setConnectedTools(prev => ({ ...prev, [toolName]: true }));
+        resolve();
+      }, 2000);
+    });
+  };
+
+  const suggestToolConnection = (toolName: string) => {
+    const connectionMessage: Message = {
+      id: Date.now().toString(),
+      type: 'bot',
+      content: `I notice you need ${toolName} for this workflow. Would you like me to help you connect it? It's quick and secure! 🔗`,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, connectionMessage]);
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
@@ -205,7 +239,7 @@ const ChatInterface = () => {
       test: 'pending'
     });
     const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionSuccess, setConnectionSuccess] = useState(false);
+    const [connectingTool, setConnectingTool] = useState('');
 
     const triggerOptions = [
       'Time-based',
@@ -240,8 +274,21 @@ const ChatInterface = () => {
     ];
 
     const needsSlackDetails = selectedAction === 'Send Slack message';
+    
+    // Check which tools are connected/disconnected
+    const connectedToolsList = suggestion.tools.filter(tool => connectedTools[tool]);
+    const disconnectedToolsList = suggestion.tools.filter(tool => !connectedTools[tool]);
+    const allToolsConnected = disconnectedToolsList.length === 0;
 
     const handleConnectWorkflow = () => {
+      if (!allToolsConnected) {
+        // Suggest connecting missing tools
+        disconnectedToolsList.forEach(tool => {
+          suggestToolConnection(tool);
+        });
+        return;
+      }
+      
       setShowSetupSteps(true);
       console.log('Setting up workflow:', {
         trigger: selectedTrigger,
@@ -252,14 +299,15 @@ const ChatInterface = () => {
       });
     };
 
-    const handleConnectTool = async () => {
+    const handleConnectTool = async (toolName?: string) => {
+      const toolToConnect = toolName || disconnectedToolsList[0];
       setIsConnecting(true);
+      setConnectingTool(toolToConnect);
       setStepStatuses(prev => ({ ...prev, connect: 'loading' }));
       
-      // Simulate connection process
-      setTimeout(() => {
+      try {
+        await connectTool(toolToConnect);
         setStepStatuses(prev => ({ ...prev, connect: 'completed' }));
-        setConnectionSuccess(true);
         setIsConnecting(false);
         setCurrentStep(2);
         
@@ -267,7 +315,10 @@ const ChatInterface = () => {
         setTimeout(() => {
           handleConfigurePermissions();
         }, 1000);
-      }, 2000);
+      } catch (error) {
+        console.error('Error connecting tool:', error);
+        setIsConnecting(false);
+      }
     };
 
     const handleConfigurePermissions = async () => {
@@ -318,6 +369,36 @@ const ChatInterface = () => {
       return 'bg-gray-50 border-gray-200';
     };
 
+    const handleViewDashboard = () => {
+      // Open dashboard in a sheet
+      const dashboardMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: "Opening your workflow dashboard! Here you can see all your active automations, their performance, and recent activity.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, dashboardMessage]);
+    };
+
+    const handleEditWorkflow = () => {
+      // Reset to editing mode
+      setShowSetupSteps(false);
+      setCurrentStep(1);
+      setStepStatuses({
+        connect: 'pending',
+        permissions: 'pending',
+        test: 'pending'
+      });
+      
+      const editMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: "Great! You can now edit your workflow settings below. Make any changes you need and then save the updated workflow.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, editMessage]);
+    };
+
     const SetupStepsFlow = () => (
       <div className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-200">
         <div className="flex items-center gap-2 mb-6">
@@ -333,8 +414,10 @@ const ChatInterface = () => {
               <div className="font-medium text-gray-800">Connect your tools</div>
               <div className="text-sm text-gray-600">
                 {stepStatuses.connect === 'completed' ? 
-                  `✅ Successfully connected to ${suggestion.tools.join(', ')}` :
-                  `We'll help you connect ${suggestion.tools.join(', ')}`
+                  `✅ Successfully connected to ${connectingTool || suggestion.tools.join(', ')}` :
+                  stepStatuses.connect === 'loading' ?
+                  `🔗 Connecting to ${connectingTool}...` :
+                  `We'll help you connect ${suggestion.tools.join(', ')}` 
                 }
               </div>
             </div>
@@ -342,7 +425,7 @@ const ChatInterface = () => {
               <Button 
                 size="sm" 
                 className="bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={handleConnectTool}
+                onClick={() => handleConnectTool()}
                 disabled={isConnecting}
               >
                 {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect'}
@@ -414,12 +497,12 @@ const ChatInterface = () => {
         </div>
 
         {/* Connection Instructions */}
-        {currentStep === 1 && stepStatuses.connect === 'pending' && (
+        {currentStep === 1 && stepStatuses.connect === 'pending' && !allToolsConnected && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
               <div className="text-sm text-amber-700">
-                <strong>Note:</strong> You'll be redirected to connect your {suggestion.tools[0]} account. This is secure and we only access what's needed for your workflow.
+                <strong>Note:</strong> You'll be redirected to connect your {disconnectedToolsList[0]} account. This is secure and we only access what's needed for your workflow.
               </div>
             </div>
           </div>
@@ -436,11 +519,11 @@ const ChatInterface = () => {
               Your automation will now run {selectedFrequency.toLowerCase()} and {selectedAction.toLowerCase()}.
             </div>
             <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" className="text-green-700 border-green-300">
-                <ExternalLink className="w-4 h-4 mr-1" />
+              <Button size="sm" variant="outline" className="text-green-700 border-green-300" onClick={handleViewDashboard}>
+                <BarChart3 className="w-4 h-4 mr-1" />
                 View Dashboard
               </Button>
-              <Button size="sm" variant="outline" className="text-green-700 border-green-300">
+              <Button size="sm" variant="outline" className="text-green-700 border-green-300" onClick={handleEditWorkflow}>
                 <Edit className="w-4 h-4 mr-1" />
                 Edit Workflow
               </Button>
@@ -466,6 +549,35 @@ const ChatInterface = () => {
         </div>
         
         <div className="p-6 space-y-6">
+          {/* Connection Status Alert */}
+          {!allToolsConnected && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-center gap-2 text-amber-800 font-medium mb-2">
+                <div className="w-2 h-2 bg-amber-400 rounded-full" />
+                Tools Connection Required
+              </div>
+              <div className="text-sm text-amber-700 mb-3">
+                Some tools need to be connected before you can set up this workflow:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {disconnectedToolsList.map((tool, index) => (
+                  <div key={index} className="flex items-center gap-1 bg-white/60 px-3 py-1 rounded-full text-sm">
+                    {getToolIcon(tool)}
+                    <span className="text-amber-800">{tool}</span>
+                    <Button
+                      size="sm" 
+                      variant="ghost"
+                      className="h-auto p-1 text-amber-600 hover:text-amber-800"
+                      onClick={() => handleConnectTool(tool)}
+                    >
+                      Connect
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-3">
               <div className="font-medium text-gray-700 flex items-center gap-2">
@@ -554,9 +666,18 @@ const ChatInterface = () => {
             <div className="font-medium text-gray-700">Required Tools</div>
             <div className="flex flex-wrap gap-2">
               {suggestion.tools.map((tool, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
+                <Badge 
+                  key={index} 
+                  variant="secondary" 
+                  className={`flex items-center gap-1 px-3 py-1 ${
+                    connectedTools[tool] 
+                      ? 'bg-green-100 text-green-700 border-green-200' 
+                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                  }`}
+                >
                   {getToolIcon(tool)}
                   {tool}
+                  {connectedTools[tool] && <CheckCircle className="w-3 h-3 ml-1" />}
                 </Badge>
               ))}
             </div>
@@ -586,6 +707,11 @@ const ChatInterface = () => {
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Setting Up...
+                </>
+              ) : !allToolsConnected ? (
+                <>
+                  Connect Tools First
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               ) : (
                 <>
