@@ -401,9 +401,17 @@ const ChatInterface = () => {
       setTimeout(() => {
         setStepStatuses(prev => ({ ...prev, test: 'completed' }));
         
+        console.log('Workflow test completed, stepStatuses should be:', { test: 'completed' });
+        
         // Show success message
         setTimeout(() => {
-          alert('🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule.');
+          const successMessage: Message = {
+            id: Date.now().toString(),
+            type: 'bot',
+            content: '🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule. You can now view your dashboard or edit the workflow settings.',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, successMessage]);
         }, 500);
       }, 2000);
     };
@@ -787,6 +795,7 @@ const ChatInterface = () => {
 
           {/* Main action buttons */}
           <div className="flex gap-3 pt-4">
+            {console.log('Current stepStatuses.test:', stepStatuses.test)}
             {stepStatuses.test === 'completed' ? (
               <>
                 <Button 
@@ -835,6 +844,11 @@ const ChatInterface = () => {
                 </Button>
               </>
             )}
+          </div>
+
+          {/* Debug info - remove this after testing */}
+          <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+            Debug: stepStatuses.test = {stepStatuses.test}, showSetupSteps = {showSetupSteps.toString()}
           </div>
 
           {showSetupSteps && <SetupStepsFlow />}
