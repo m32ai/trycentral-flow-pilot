@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ const ChatInterface = () => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Tool connection states
@@ -331,7 +333,13 @@ const ChatInterface = () => {
                 
                 // Show success message
                 setTimeout(() => {
-                  alert('🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule.');
+                  const successMessage: Message = {
+                    id: Date.now().toString(),
+                    type: 'bot',
+                    content: '🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule.',
+                    timestamp: new Date()
+                  };
+                  setMessages(prev => [...prev, successMessage]);
                 }, 500);
               }, 2000);
             }, 1000);
@@ -421,11 +429,11 @@ const ChatInterface = () => {
     };
 
     const handleViewDashboard = () => {
-      // Open dashboard in a sheet
+      setShowDashboard(true);
       const dashboardMessage: Message = {
         id: Date.now().toString(),
         type: 'bot',
-        content: "🚀 Opening your workflow dashboard! Here you can monitor all your active automations, view performance metrics, and see recent activity. You currently have 3 active workflows with a 98% success rate this week!",
+        content: "🚀 Opening your workflow dashboard! Here you can monitor all your active automations, view performance metrics, and see recent activity.",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, dashboardMessage]);
@@ -444,7 +452,7 @@ const ChatInterface = () => {
       const editMessage: Message = {
         id: Date.now().toString(),
         type: 'bot',
-        content: "✏️ Perfect! You can now edit your workflow settings below. Make any changes you need and then save the updated workflow.",
+        content: "✏️ Perfect! You can now edit your workflow settings below. Make any changes you need and then click 'Set Up Workflow' again to save the updated workflow.",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, editMessage]);
@@ -844,6 +852,127 @@ const ChatInterface = () => {
             <Badge className="bg-blue-100 text-blue-700 border-blue-200">
               1000+ automations created
             </Badge>
+            <Sheet open={showDashboard} onOpenChange={setShowDashboard}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                  <BarChart3 className="w-4 h-4 mr-1" />
+                  Dashboard
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-[800px] sm:max-w-[800px]">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    Workflow Dashboard
+                  </SheetTitle>
+                  <SheetDescription>
+                    Monitor your active automations and view performance metrics.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6 space-y-6">
+                  {/* Dashboard Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Active Workflows</p>
+                          <p className="text-2xl font-bold text-blue-600">3</p>
+                        </div>
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Zap className="w-6 h-6 text-blue-600" />
+                        </div>
+                      </div>
+                    </Card>
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Success Rate</p>
+                          <p className="text-2xl font-bold text-green-600">98%</p>
+                        </div>
+                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                          <CheckCircle className="w-6 h-6 text-green-600" />
+                        </div>
+                      </div>
+                    </Card>
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">This Week</p>
+                          <p className="text-2xl font-bold text-purple-600">47</p>
+                        </div>
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Play className="w-6 h-6 text-purple-600" />
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Active Workflows */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Active Workflows</h3>
+                    <div className="space-y-3">
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                              <Slack className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Daily Slack Standup Reminder</p>
+                              <p className="text-sm text-gray-600">Weekdays at 9:00 AM</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-100 text-green-700">Active</Badge>
+                            <Button size="sm" variant="outline">
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Mail className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Email to WhatsApp Notifications</p>
+                              <p className="text-sm text-gray-600">When important email received</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-100 text-green-700">Active</Badge>
+                            <Button size="sm" variant="outline">
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                              <BarChart3 className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Weekly Team Report</p>
+                              <p className="text-sm text-gray-600">Fridays at 5:00 PM</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-100 text-green-700">Active</Badge>
+                            <Button size="sm" variant="outline">
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
