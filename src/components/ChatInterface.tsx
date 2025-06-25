@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit } from 'lucide-react';
+import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -23,6 +23,7 @@ interface WorkflowSuggestion {
   frequency: string;
   tools: string[];
   missingInfo?: string[];
+  prefilled?: boolean;
 }
 
 const ChatInterface = () => {
@@ -30,7 +31,7 @@ const ChatInterface = () => {
     {
       id: '1',
       type: 'bot',
-      content: "Hi! I'm your TryCentral AI assistant. Tell me what task you'd like to automate and I'll help you set it up. For example: 'Send me a Slack message every morning at 9am' or 'When I get an important email, notify me on WhatsApp'",
+      content: "Hi! I'm your TryCentral AI assistant. I can help you automate tasks across your favorite tools. Try one of these common workflows or tell me what you'd like to automate:",
       timestamp: new Date()
     }
   ]);
@@ -45,6 +46,42 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const prefilledWorkflows = [
+    {
+      title: "Daily Slack Standup Reminder",
+      description: "Send a Slack message every weekday morning",
+      workflow: {
+        trigger: "Time-based",
+        action: "Send Slack message",
+        frequency: "Weekdays at 9:00 AM",
+        tools: ["Slack"],
+        prefilled: true
+      }
+    },
+    {
+      title: "Email to WhatsApp Notifications",
+      description: "Get WhatsApp alerts for important emails",
+      workflow: {
+        trigger: "Email received",
+        action: "Send WhatsApp message",
+        frequency: "Every time",
+        tools: ["Gmail", "WhatsApp"],
+        prefilled: true
+      }
+    },
+    {
+      title: "Weekly Team Report",
+      description: "Automatically generate and send weekly reports",
+      workflow: {
+        trigger: "Time-based",
+        action: "Generate report",
+        frequency: "Weekly on Fridays",
+        tools: ["Google Sheets", "Slack"],
+        prefilled: true
+      }
+    }
+  ];
 
   const analyzeUserIntent = (message: string): WorkflowSuggestion | null => {
     const lowerMessage = message.toLowerCase();
@@ -99,6 +136,7 @@ const ChatInterface = () => {
       case 'whatsapp': return <Phone className="w-4 h-4" />;
       case 'gmail': return <Mail className="w-4 h-4" />;
       case 'calendar': return <Calendar className="w-4 h-4" />;
+      case 'google sheets': return <MessageSquare className="w-4 h-4" />;
       default: return <Zap className="w-4 h-4" />;
     }
   };
@@ -123,7 +161,7 @@ const ChatInterface = () => {
       
       let botResponse = '';
       if (workflowSuggestion) {
-        botResponse = `I understand! You want to automate: "${input}". Let me set this up for you.`;
+        botResponse = `Perfect! I understand you want to automate: "${input}". Let me set this up for you.`;
       } else {
         botResponse = `I'd love to help you automate that! Can you be more specific about when you want this to happen and what action should be taken? For example: "Every Monday at 10am" or "When I receive an email from my boss"`;
       }
@@ -141,12 +179,24 @@ const ChatInterface = () => {
     }, 1500);
   };
 
+  const handlePrefilledWorkflow = (workflow: WorkflowSuggestion) => {
+    const botMessage: Message = {
+      id: Date.now().toString(),
+      type: 'bot',
+      content: "Great choice! Let me set up this workflow for you. You can customize any of the settings below:",
+      timestamp: new Date(),
+      workflowSuggestion: workflow
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+  };
+
   const WorkflowCard = ({ suggestion }: { suggestion: WorkflowSuggestion }) => {
     const [selectedTrigger, setSelectedTrigger] = useState(suggestion.trigger);
     const [selectedAction, setSelectedAction] = useState(suggestion.action);
     const [selectedFrequency, setSelectedFrequency] = useState(suggestion.frequency);
-    const [customMessage, setCustomMessage] = useState('');
-    const [customChannel, setCustomChannel] = useState('');
+    const [customMessage, setCustomMessage] = useState(suggestion.prefilled ? 'Good morning team! Please share your daily standup updates.' : '');
+    const [customChannel, setCustomChannel] = useState(suggestion.prefilled ? '#general' : '');
 
     const triggerOptions = [
       'Time-based',
@@ -165,6 +215,7 @@ const ChatInterface = () => {
       'Create calendar event',
       'Send notification',
       'Update spreadsheet',
+      'Generate report',
       'Execute webhook'
     ];
 
@@ -173,32 +224,41 @@ const ChatInterface = () => {
       'Daily',
       'Weekly',
       'Monthly',
-      'Every time',
       'Weekdays only',
+      'Weekends only',
+      'Every time',
       'Custom schedule'
     ];
 
     const needsSlackDetails = selectedAction === 'Send Slack message';
 
     return (
-      <Card className="mt-4 p-6 bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 border-brand-primary/20">
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-brand-primary font-semibold">
+      <Card className="mt-6 p-0 bg-white border-0 shadow-lg rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4">
+          <div className="flex items-center gap-2 text-white font-semibold">
             <Zap className="w-5 h-5" />
             Workflow Configuration
+            {suggestion.prefilled && (
+              <Badge className="bg-white/20 text-white border-0 ml-2">
+                <Star className="w-3 h-3 mr-1" />
+                Suggested
+              </Badge>
+            )}
           </div>
-          
+        </div>
+        
+        <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-3">
               <div className="font-medium text-gray-700 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4 text-blue-500" />
                 When
               </div>
               <Select value={selectedTrigger} onValueChange={setSelectedTrigger}>
-                <SelectTrigger className="bg-white border-brand-primary/20">
+                <SelectTrigger className="bg-gray-50 border-gray-200 h-11">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
+                <SelectContent className="bg-white border shadow-xl z-50">
                   {triggerOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -208,14 +268,14 @@ const ChatInterface = () => {
             
             <div className="space-y-3">
               <div className="font-medium text-gray-700 flex items-center gap-2">
-                <Zap className="w-4 h-4" />
+                <Zap className="w-4 h-4 text-purple-500" />
                 Do
               </div>
               <Select value={selectedAction} onValueChange={setSelectedAction}>
-                <SelectTrigger className="bg-white border-brand-primary/20">
+                <SelectTrigger className="bg-gray-50 border-gray-200 h-11">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
+                <SelectContent className="bg-white border shadow-xl z-50">
                   {actionOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -225,14 +285,14 @@ const ChatInterface = () => {
             
             <div className="space-y-3">
               <div className="font-medium text-gray-700 flex items-center gap-2">
-                <Repeat className="w-4 h-4" />
+                <Repeat className="w-4 h-4 text-green-500" />
                 How Often
               </div>
               <Select value={selectedFrequency} onValueChange={setSelectedFrequency}>
-                <SelectTrigger className="bg-white border-brand-primary/20">
+                <SelectTrigger className="bg-gray-50 border-gray-200 h-11">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
+                <SelectContent className="bg-white border shadow-xl z-50">
                   {frequencyOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -242,9 +302,9 @@ const ChatInterface = () => {
           </div>
 
           {needsSlackDetails && (
-            <div className="space-y-4 p-4 bg-white rounded-lg border border-brand-primary/10">
+            <div className="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="font-medium text-gray-700 flex items-center gap-2">
-                <Slack className="w-4 h-4 text-brand-primary" />
+                <Slack className="w-4 h-4 text-blue-600" />
                 Slack Configuration
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,7 +314,7 @@ const ChatInterface = () => {
                     placeholder="e.g., #general, @username"
                     value={customChannel}
                     onChange={(e) => setCustomChannel(e.target.value)}
-                    className="bg-white border-gray-300"
+                    className="bg-white border-blue-200 h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -263,20 +323,20 @@ const ChatInterface = () => {
                     placeholder="What message should I send?"
                     value={customMessage}
                     onChange={(e) => setCustomMessage(e.target.value)}
-                    className="bg-white border-gray-300 min-h-[80px]"
+                    className="bg-white border-blue-200 min-h-[80px]"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          <Separator />
+          <Separator className="bg-gray-100" />
           
           <div className="space-y-3">
             <div className="font-medium text-gray-700">Required Tools</div>
             <div className="flex flex-wrap gap-2">
               {suggestion.tools.map((tool, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1 bg-brand-primary/10 text-brand-primary border-brand-primary/20">
+                <Badge key={index} variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
                   {getToolIcon(tool)}
                   {tool}
                 </Badge>
@@ -286,11 +346,11 @@ const ChatInterface = () => {
 
           {suggestion.missingInfo && suggestion.missingInfo.length > 0 && (
             <div className="space-y-3">
-              <div className="font-medium text-orange-600">Configuration Notes:</div>
+              <div className="font-medium text-amber-600">Configuration Notes:</div>
               <div className="space-y-2">
                 {suggestion.missingInfo.map((info, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-3 rounded-lg">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0" />
+                  <div key={index} className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <div className="w-2 h-2 bg-amber-400 rounded-full flex-shrink-0" />
                     {info}
                   </div>
                 ))}
@@ -299,12 +359,12 @@ const ChatInterface = () => {
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-white">
+            <Button className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl">
               Connect & Set Up Workflow
             </Button>
-            <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10">
+            <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 h-11 rounded-xl px-6">
               <Edit className="w-4 h-4 mr-2" />
-              Test Run
+              Test
             </Button>
           </div>
         </div>
@@ -313,88 +373,129 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center">
-            <Bot className="w-6 h-6 text-white" />
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TryCentral AI</h1>
+              <p className="text-sm text-gray-600">Automation made simple</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold gradient-text">TryCentral AI</h1>
-            <p className="text-sm text-gray-600">Automation made simple</p>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-green-100 text-green-700 border-green-200">
+              ⭐ 5.0 rating
+            </Badge>
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+              1000+ automations created
+            </Badge>
           </div>
         </div>
       </div>
 
+      {/* Quick Start Suggestions */}
+      {messages.length === 1 && (
+        <div className="p-4 bg-white/50">
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Workflows</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {prefilledWorkflows.map((workflow, index) => (
+                <Card 
+                  key={index} 
+                  className="p-4 cursor-pointer hover:shadow-md transition-shadow bg-white border-gray-200 rounded-xl"
+                  onClick={() => handlePrefilledWorkflow(workflow.workflow)}
+                >
+                  <h4 className="font-medium text-gray-800 mb-2">{workflow.title}</h4>
+                  <p className="text-sm text-gray-600 mb-3">{workflow.description}</p>
+                  <div className="flex items-center gap-2">
+                    {workflow.workflow.tools.map((tool, idx) => (
+                      <div key={idx} className="flex items-center gap-1 text-xs text-blue-600">
+                        {getToolIcon(tool)}
+                        {tool}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-            <div className={`flex items-start gap-3 max-w-4xl ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.type === 'user' 
-                  ? 'bg-brand-primary text-white' 
-                  : 'bg-white border-2 border-brand-primary/20'
-              }`}>
-                {message.type === 'user' ? (
-                  <User className="w-4 h-4" />
-                ) : (
-                  <Bot className="w-4 h-4 text-brand-primary" />
-                )}
-              </div>
-              <div className={`space-y-1 ${message.type === 'user' ? 'text-right' : ''}`}>
-                <div className={`inline-block p-3 rounded-2xl max-w-full ${
-                  message.type === 'user'
-                    ? 'bg-brand-primary text-white rounded-br-md'
-                    : 'bg-white border border-gray-200 rounded-bl-md shadow-sm'
+        <div className="max-w-4xl mx-auto space-y-4">
+          {messages.map((message) => (
+            <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+              <div className={`flex items-start gap-3 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  message.type === 'user' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'bg-white border-2 border-blue-200'
                 }`}>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  {message.type === 'user' ? (
+                    <User className="w-4 h-4" />
+                  ) : (
+                    <Bot className="w-4 h-4 text-blue-500" />
+                  )}
                 </div>
-                <div className="text-xs text-gray-500 px-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                {message.workflowSuggestion && (
-                  <WorkflowCard suggestion={message.workflowSuggestion} />
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {isTyping && (
-          <div className="flex justify-start animate-fade-in">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-white border-2 border-brand-primary/20 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-brand-primary" />
-              </div>
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md shadow-sm p-3">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                <div className={`space-y-1 ${message.type === 'user' ? 'text-right' : ''}`}>
+                  <div className={`inline-block p-4 rounded-2xl max-w-full ${
+                    message.type === 'user'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md'
+                      : 'bg-white border border-gray-200 rounded-bl-md shadow-sm'
+                  }`}>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                  <div className="text-xs text-gray-500 px-1">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  {message.workflowSuggestion && (
+                    <WorkflowCard suggestion={message.workflowSuggestion} />
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          ))}
+          
+          {isTyping && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-white border-2 border-blue-200 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md shadow-sm p-4">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="flex gap-2 max-w-4xl mx-auto">
+      <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 p-4">
+        <div className="flex gap-3 max-w-4xl mx-auto">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Tell me what you'd like to automate... e.g., 'Send me a Slack reminder every Friday at 5pm'"
-            className="flex-1 border-gray-300 focus:border-brand-primary focus:ring-brand-primary"
+            className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-12 rounded-xl bg-white"
           />
           <Button 
             onClick={handleSendMessage}
             disabled={!input.trim() || isTyping}
-            className="bg-brand-primary hover:bg-brand-primary/90 text-white px-6"
+            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 h-12 rounded-xl"
           >
             <Send className="w-4 h-4" />
           </Button>
