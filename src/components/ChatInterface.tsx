@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -292,16 +291,54 @@ const ChatInterface = () => {
     const disconnectedToolsList = suggestion.tools.filter(tool => !connectedTools[tool]);
     const allToolsConnected = disconnectedToolsList.length === 0;
 
-    const handleConnectWorkflow = () => {
+    const handleConnectWorkflow = async () => {
       if (!allToolsConnected) {
         // Start connecting the first disconnected tool
         if (disconnectedToolsList.length > 0) {
-          handleConnectTool(disconnectedToolsList[0]);
+          await handleConnectTool(disconnectedToolsList[0]);
         }
         return;
       }
       
       setShowSetupSteps(true);
+      setCurrentStep(1);
+      setStepStatuses({
+        connect: 'loading',
+        permissions: 'pending',
+        test: 'pending'
+      });
+
+      // Automatically start the setup flow
+      setTimeout(async () => {
+        // Step 1: Connect tools (simulate connection)
+        setStepStatuses(prev => ({ ...prev, connect: 'completed' }));
+        setCurrentStep(2);
+        
+        // Step 2: Configure permissions
+        setTimeout(async () => {
+          setStepStatuses(prev => ({ ...prev, permissions: 'loading' }));
+          
+          setTimeout(() => {
+            setStepStatuses(prev => ({ ...prev, permissions: 'completed' }));
+            setCurrentStep(3);
+            
+            // Step 3: Test & activate
+            setTimeout(() => {
+              setStepStatuses(prev => ({ ...prev, test: 'loading' }));
+              
+              setTimeout(() => {
+                setStepStatuses(prev => ({ ...prev, test: 'completed' }));
+                
+                // Show success message
+                setTimeout(() => {
+                  alert('🎉 Workflow activated successfully! Your automation is now live and will run according to your schedule.');
+                }, 500);
+              }, 2000);
+            }, 1000);
+          }, 1500);
+        }, 1000);
+      }, 1000);
+      
       console.log('Setting up workflow:', {
         trigger: selectedTrigger,
         action: selectedAction,
@@ -494,9 +531,9 @@ const ChatInterface = () => {
               <div className="font-medium text-gray-800">Connect your tools</div>
               <div className="text-sm text-gray-600">
                 {stepStatuses.connect === 'completed' ? 
-                  `✅ Successfully connected to ${connectingTool || suggestion.tools.join(', ')}` :
+                  `✅ Successfully connected to ${suggestion.tools.join(', ')}` :
                   stepStatuses.connect === 'loading' ?
-                  `🔗 Connecting to ${connectingTool}...` :
+                  `🔗 Connecting to ${suggestion.tools.join(', ')}...` :
                   `We'll help you connect ${suggestion.tools.join(', ')}` 
                 }
               </div>
@@ -577,12 +614,12 @@ const ChatInterface = () => {
         </div>
 
         {/* Connection Instructions */}
-        {currentStep === 1 && stepStatuses.connect === 'pending' && !allToolsConnected && (
+        {currentStep === 1 && stepStatuses.connect === 'loading' && !allToolsConnected && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
               <div className="text-sm text-amber-700">
-                <strong>Note:</strong> You'll be redirected to connect your {disconnectedToolsList[0]} account. This is secure and we only access what's needed for your workflow.
+                <strong>Connecting...</strong> We're securely connecting to your {suggestion.tools.join(', ')} account(s).
               </div>
             </div>
           </div>
