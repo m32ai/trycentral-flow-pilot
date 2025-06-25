@@ -295,7 +295,7 @@ const ChatInterface = () => {
       if (!allToolsConnected) {
         // Start connecting the first disconnected tool
         if (disconnectedToolsList.length > 0) {
-          await handleConnectTool(disconnectedToolsList[0]);
+          await handleConnectTool(disconnectedToolsList[0] || suggestion.tools[0]);
         }
         return;
       }
@@ -542,7 +542,7 @@ const ChatInterface = () => {
               <Button 
                 size="sm" 
                 className="bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={() => handleConnectTool()}
+                onClick={() => handleConnectTool(disconnectedToolsList[0] || suggestion.tools[0])}
                 disabled={isConnecting}
               >
                 {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect'}
