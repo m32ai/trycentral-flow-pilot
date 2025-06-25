@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star } from 'lucide-react';
+import { Send, Bot, User, Zap, Calendar, MessageSquare, Slack, Phone, Mail, Clock, Repeat, Edit, Star, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -192,11 +191,13 @@ const ChatInterface = () => {
   };
 
   const WorkflowCard = ({ suggestion }: { suggestion: WorkflowSuggestion }) => {
+    // Pre-select values based on the suggestion
     const [selectedTrigger, setSelectedTrigger] = useState(suggestion.trigger);
     const [selectedAction, setSelectedAction] = useState(suggestion.action);
     const [selectedFrequency, setSelectedFrequency] = useState(suggestion.frequency);
     const [customMessage, setCustomMessage] = useState(suggestion.prefilled ? 'Good morning team! Please share your daily standup updates.' : '');
     const [customChannel, setCustomChannel] = useState(suggestion.prefilled ? '#general' : '');
+    const [showSetupSteps, setShowSetupSteps] = useState(false);
 
     const triggerOptions = [
       'Time-based',
@@ -231,6 +232,70 @@ const ChatInterface = () => {
     ];
 
     const needsSlackDetails = selectedAction === 'Send Slack message';
+
+    const handleConnectWorkflow = () => {
+      setShowSetupSteps(true);
+      console.log('Setting up workflow:', {
+        trigger: selectedTrigger,
+        action: selectedAction,
+        frequency: selectedFrequency,
+        customMessage,
+        customChannel
+      });
+    };
+
+    const SetupStepsFlow = () => (
+      <div className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-200">
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-blue-800">Setting up your workflow...</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
+            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-800">Connect your tools</div>
+              <div className="text-sm text-gray-600">We'll help you connect {suggestion.tools.join(', ')}</div>
+            </div>
+            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">
+              Connect
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-600">Configure permissions</div>
+              <div className="text-sm text-gray-500">Grant necessary permissions for the workflow</div>
+            </div>
+            <Button size="sm" variant="outline" disabled>
+              Pending
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-600">Test & activate</div>
+              <div className="text-sm text-gray-500">Run a test and activate your workflow</div>
+            </div>
+            <Button size="sm" variant="outline" disabled>
+              Pending
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
+            <div className="text-sm text-amber-700">
+              <strong>Note:</strong> You'll be redirected to connect your {suggestion.tools[0]} account. This is secure and we only access what's needed for your workflow.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
 
     return (
       <Card className="mt-6 p-0 bg-white border-0 shadow-lg rounded-2xl overflow-hidden">
@@ -344,7 +409,7 @@ const ChatInterface = () => {
             </div>
           </div>
 
-          {suggestion.missingInfo && suggestion.missingInfo.length > 0 && (
+          {suggestion.missingInfo && suggestion.missingInfo.length > 0 && !suggestion.prefilled && (
             <div className="space-y-3">
               <div className="font-medium text-amber-600">Configuration Notes:</div>
               <div className="space-y-2">
@@ -359,14 +424,30 @@ const ChatInterface = () => {
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl">
-              Connect & Set Up Workflow
+            <Button 
+              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl"
+              onClick={handleConnectWorkflow}
+              disabled={showSetupSteps}
+            >
+              {showSetupSteps ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Setting Up...
+                </>
+              ) : (
+                <>
+                  Connect & Set Up Workflow
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
             <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 h-11 rounded-xl px-6">
               <Edit className="w-4 h-4 mr-2" />
               Test
             </Button>
           </div>
+
+          {showSetupSteps && <SetupStepsFlow />}
         </div>
       </Card>
     );
