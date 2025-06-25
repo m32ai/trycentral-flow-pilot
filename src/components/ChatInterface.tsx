@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -643,16 +642,6 @@ const ChatInterface = () => {
             <div className="text-sm text-green-700 mt-1">
               Your automation will now run {selectedFrequency.toLowerCase()} and {selectedAction.toLowerCase()}.
             </div>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" className="text-green-700 border-green-300" onClick={handleViewDashboard}>
-                <BarChart3 className="w-4 h-4 mr-1" />
-                View Dashboard
-              </Button>
-              <Button size="sm" variant="outline" className="text-green-700 border-green-300" onClick={handleEditWorkflow}>
-                <Edit className="w-4 h-4 mr-1" />
-                Edit Workflow
-              </Button>
-            </div>
           </div>
         )}
       </div>
@@ -796,33 +785,56 @@ const ChatInterface = () => {
             </div>
           )}
 
+          {/* Main action buttons */}
           <div className="flex gap-3 pt-4">
-            <Button 
-              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl"
-              onClick={handleConnectWorkflow}
-              disabled={showSetupSteps || !allToolsConnected}
-            >
-              {showSetupSteps ? (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Setting Up...
-                </>
-              ) : !allToolsConnected ? (
-                <>
-                  Connect Tools First
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  Set Up Workflow
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
-            <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 h-11 rounded-xl px-6">
-              <Edit className="w-4 h-4 mr-2" />
-              Test
-            </Button>
+            {stepStatuses.test === 'completed' ? (
+              <>
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 rounded-xl"
+                  onClick={handleViewDashboard}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  View Dashboard
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50 h-11 rounded-xl"
+                  onClick={handleEditWorkflow}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Workflow
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11 rounded-xl"
+                  onClick={handleConnectWorkflow}
+                  disabled={showSetupSteps || !allToolsConnected}
+                >
+                  {showSetupSteps ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Setting Up...
+                    </>
+                  ) : !allToolsConnected ? (
+                    <>
+                      Connect Tools First
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  ) : (
+                    <>
+                      Set Up Workflow
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 h-11 rounded-xl px-6">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Test
+                </Button>
+              </>
+            )}
           </div>
 
           {showSetupSteps && <SetupStepsFlow />}
