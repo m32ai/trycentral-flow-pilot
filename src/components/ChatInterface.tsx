@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -293,7 +294,10 @@ const ChatInterface = () => {
 
     const handleConnectWorkflow = () => {
       if (!allToolsConnected) {
-        // Show connection cards instead of suggesting tools
+        // Start connecting the first disconnected tool
+        if (disconnectedToolsList.length > 0) {
+          handleConnectTool(disconnectedToolsList[0]);
+        }
         return;
       }
       
